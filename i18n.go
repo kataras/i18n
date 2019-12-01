@@ -316,7 +316,7 @@ func (i *I18n) GetLocale(r *http.Request) Locale {
 
 	if i.ContextKey != nil {
 		if v := r.Context().Value(i.ContextKey); v != nil {
-			if s, ok := v.(string); ok {
+			if s, isString := v.(string); isString {
 				_, index, ok = i.TryMatchString(s)
 			}
 		}
