@@ -155,7 +155,7 @@ func (i *I18n) SetDefault(langCode string) bool {
 		return false
 	}
 
-	if tag, index, conf := Default.matcher.Match(t); conf > language.Low {
+	if tag, index, conf := i.matcher.Match(t); conf > language.Low {
 		if l, ok := i.localizer.(interface {
 			SetDefault(int) bool
 		}); ok {
