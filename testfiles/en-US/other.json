@@ -1,0 +1,4 @@
+{
+    "JSONTemplateExample": "value of {{.Value}}",
+    "TypeOf": "type of %T"
+}

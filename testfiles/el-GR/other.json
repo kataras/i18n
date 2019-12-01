@@ -1,0 +1,4 @@
+{
+    "JSONTemplateExample": "τιμή του {{.Value}}",
+    "TypeOf": "τύπος %T"
+}
