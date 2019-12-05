@@ -106,6 +106,7 @@ func GOI18N(globPattern string) i18n.Loader {
 			// i18n package matches the language by itself so we don't really need to do it at serve-time,
 			// this is why we preload them here.
 			locales[langIndex] = &goi18nLocale{
+				index:     langIndex,
 				id:        tag.String(),
 				tag:       &tag,
 				localizer: goI18n.NewLocalizer(b, tag.String()),
@@ -122,9 +123,14 @@ func GOI18N(globPattern string) i18n.Loader {
 }
 
 type goi18nLocale struct {
+	index     int
 	id        string
 	tag       *language.Tag
 	localizer *goI18n.Localizer
+}
+
+func (l *goi18nLocale) Index() int {
+	return l.index
 }
 
 func (l *goi18nLocale) Tag() *language.Tag {

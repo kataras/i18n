@@ -59,6 +59,8 @@ type (
 	// Locale is the interface which returns from a `Localizer.GetLocale` method.
 	// It serves the translations based on "key" or format. See `GetMessage`.
 	Locale interface {
+		// Index returns the current locale index from the languages list.
+		Index() int
 		// Tag returns the full language Tag attached to this Locale,
 		// it should be unique across different Locales.
 		Tag() *language.Tag
@@ -92,6 +94,9 @@ type I18n struct {
 	Cookie string
 	// If true then a subdomain can be a language identifier too.
 	Subdomain bool
+	// If true then it will return empty string when translation for a a specific language's key was not found.
+	// Defaults to false, fallback defaultLang:key will be used.
+	Strict bool
 }
 
 // makeTags converts language codes to language Tags.
@@ -291,7 +296,12 @@ func (i *I18n) Tr(lang, format string, args ...interface{}) string {
 
 	loc := i.localizer.GetLocale(index)
 	if loc != nil {
-		return loc.GetMessage(format, args...)
+		msg := loc.GetMessage(format, args...)
+		if msg == "" && !i.Strict && index > 0 {
+			// it's not the default/fallback language and not message found for that lang:key.
+			return i.localizer.GetLocale(0).GetMessage(format, args...)
+		}
+		return msg
 	}
 
 	return fmt.Sprintf(format, args...)
@@ -374,7 +384,12 @@ func GetMessage(r *http.Request, format string, args ...interface{}) string {
 func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) string {
 	loc := i.GetLocale(r)
 	if loc != nil {
-		return loc.GetMessage(format, args...)
+		// it's not the default/fallback language and not message found for that lang:key.
+		msg := loc.GetMessage(format, args...)
+		if msg == "" && !i.Strict && loc.Index() > 0 {
+			return i.localizer.GetLocale(0).GetMessage(format, args...)
+		}
+		return msg
 	}
 
 	return fmt.Sprintf(format, args...)

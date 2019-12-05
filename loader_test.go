@@ -66,6 +66,13 @@ func testLoadAndTrHelper(t *testing.T, i18N *I18n) {
 	if expected := "ολοκλήρωση παραγγελίας - όλα"; got != expected {
 		t.Fatalf("expected %s but got %s", expected, got)
 	}
+
+	// test fallback default language's key.
+	got = i18N.Tr("el-GR", "KeyOnlyOnDefaultLang")
+	if expected := "value"; got != expected {
+		t.Fatalf("expected %s but got %s", expected, got)
+	}
+
 }
 
 func TestLoadEmptyTags(t *testing.T) {
@@ -74,5 +81,6 @@ func TestLoadEmptyTags(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	i18N.SetDefault("en-US")
 	testLoadAndTrHelper(t, i18N)
 }

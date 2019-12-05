@@ -1,4 +1,5 @@
 {
     "JSONTemplateExample": "value of {{.Value}}",
-    "TypeOf": "type of %T"
+    "TypeOf": "type of %T",
+    "KeyOnlyOnDefaultLang": "value"
 }

@@ -142,6 +142,7 @@ func load(assetNames []string, asset func(string) ([]byte, error), options ...Lo
 
 			t := m.Languages[langIndex]
 			locales[langIndex] = &defaultLocale{
+				index:        langIndex,
 				id:           t.String(),
 				tag:          &t,
 				templateKeys: templateKeys,
@@ -189,12 +190,17 @@ func (l MemoryLocalizer) SetDefault(index int) bool {
 }
 
 type defaultLocale struct {
-	id  string
-	tag *language.Tag
+	index int
+	id    string
+	tag   *language.Tag
 	// templates *template.Template // we could use the ExecuteTemplate too.
 	templateKeys map[string]*template.Template
 	lineKeys     map[string]string
 	other        map[string]interface{}
+}
+
+func (l *defaultLocale) Index() int {
+	return l.index
 }
 
 func (l *defaultLocale) Tag() *language.Tag {
