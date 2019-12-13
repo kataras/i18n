@@ -8,7 +8,7 @@ import (
 
 // 1. install a go-bindata tool, e.g.
 //    $ go get -u github.com/go-bindata/go-bindata/...
-// 2. embedd local files to your application
+// 2. embed local files to your application
 //    $ go-bindata  -o locales.go ../basic/locales/...
 // 3. use the `i18n.New` and `i18n.Assets` package-level functions to initialize and load the languages
 //    `i18n.New(i18n.Assets(AssetNames, Asset), languages...)`

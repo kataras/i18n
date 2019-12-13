@@ -69,7 +69,7 @@ type (
 		//
 		// Same as `Tag().String()` but it's static.
 		Language() string
-		// GetMessage should return translated text baesd on the given "key".
+		// GetMessage should return translated text based on the given "key".
 		GetMessage(key string, args ...interface{}) string
 	}
 )
