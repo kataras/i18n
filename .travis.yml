@@ -3,7 +3,7 @@ os:
   - linux
   - osx
 go:
-  - 1.13.x
+  - 1.14.x
 go_import_path: github.com/kataras/i18n
 env:
  global:
@@ -11,10 +11,10 @@ env:
 install:
   - go get ./...
 script:
-  - go test -vet=off -v -cover ./...
+  - go test -v -cover ./...
 after_script:
   # examples
   - cd ./_examples
   - go get ./...
-  - go test -vet=off -v -cover ./...
+  - go test -v -cover ./...
   - cd ../

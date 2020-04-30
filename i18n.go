@@ -3,7 +3,6 @@ package i18n
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -242,6 +241,13 @@ func parsePath(m *Matcher, path string) int {
 	return -1
 }
 
+func reverseStrings(s []string) []string {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
+
 func parseLanguage(path string) (language.Tag, bool) {
 	if idx := strings.LastIndexByte(path, '.'); idx > 0 {
 		path = path[0:idx]
@@ -252,6 +258,8 @@ func parseLanguage(path string) (language.Tag, bool) {
 	names := strings.FieldsFunc(path, func(r rune) bool {
 		return r == '_' || r == os.PathSeparator || r == '/' || r == '.'
 	})
+
+	names = reverseStrings(names)
 
 	for _, s := range names {
 		t, err := language.Parse(s)
@@ -304,7 +312,7 @@ func (i *I18n) Tr(lang, format string, args ...interface{}) string {
 		return msg
 	}
 
-	return fmt.Sprintf(format, args...)
+	return ""
 }
 
 const acceptLanguageHeaderKey = "Accept-Language"
@@ -381,6 +389,7 @@ func GetMessage(r *http.Request, format string, args ...interface{}) string {
 }
 
 // GetMessage returns the localized text message for this "r" request based on the key "format".
+// It returns an empty string if locale or format not found.
 func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) string {
 	loc := i.GetLocale(r)
 	if loc != nil {
@@ -392,7 +401,7 @@ func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) s
 		return msg
 	}
 
-	return fmt.Sprintf(format, args...)
+	return ""
 }
 
 // Router is package-level function which calls the `Default.Router` method.
