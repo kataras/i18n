@@ -78,6 +78,31 @@ func testLoadAndTrHelper(t *testing.T, i18N *I18n) {
 	}
 }
 
+func TestLoadSingleFiles(t *testing.T) {
+	i18N, err := New(Glob("./testfiles/*.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i18N.SetDefault("en-US")
+
+	got := i18N.Tr("el-GR", "welcome")
+	if expected := "καλώς ήρθατε"; got != expected {
+		t.Fatalf("expected %s but got %s", expected, got)
+	}
+
+	got = i18N.Tr("en-US", "welcome")
+	if expected := "welcome"; got != expected {
+		t.Fatalf("expected %s but got %s", expected, got)
+	}
+
+	// test default en-US.
+	got = i18N.Tr("ch-ZN", "welcome")
+	if expected := "welcome"; got != expected {
+		t.Fatalf("expected %s but got %s", expected, got)
+	}
+
+}
 func TestLoadEmptyTags(t *testing.T) {
 	i18N, err := New(Glob("./testfiles/*/*"))
 	if err != nil {

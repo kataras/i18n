@@ -49,9 +49,11 @@ hi: 您好 %s
 
 Some other possible filename formats...
 
-- _en.file.yaml_
-- _file_en-US.json_
+- _page.en.yaml_
+- _home.cart.el-GR.json_
 - _/el/file.tml_
+
+> The language code MUST be right before the file extension.
 
 The [Default](https://github.com/kataras/i18n/blob/master/i18n.go#L37) `I18n` instance will try to load locale files from `./locales` directory.
 Use the `Tr` package-level function to translate a text based on the given language code. Use the `GetMessage` function to translate a text based on the incoming `http.Request`. Use the `Router` function to wrap an `http.Handler` (i.e an `http.ServeMux`) to set the language based on _path prefix_ such as `/zh-CN/some-path` and subdomains such as `zh.domain.com` **without the requirement of different routes per language**.
