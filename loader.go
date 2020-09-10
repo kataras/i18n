@@ -9,31 +9,53 @@ import (
 	"strings"
 	"text/template"
 
-	"golang.org/x/text/language"
-
 	"github.com/BurntSushi/toml"
+	"golang.org/x/text/language"
 	"gopkg.in/ini.v1"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // LoaderConfig is an optional configuration structure which contains
 // some options about how the template loader should act.
 //
 // See `Glob` and `Assets` package-level functions.
-type LoaderConfig struct {
-	// Template delimeters, defaults to {{ }}.
-	Left, Right string
-	// Template functions map, defaults to nil.
-	FuncMap template.FuncMap
-	// If true then it will return error on invalid templates instead of moving them to simple string-line keys.
-	// Also it will report whether the registered languages matched the loaded ones.
-	// Defaults to false.
-	Strict bool
-}
+type (
+	LoaderConfig struct {
+		// Template delimeters, defaults to {{ }}.
+		Left, Right string
+		// Template functions map per locale's template, defaults to a single "tr".
+		Funcs func(Locale) template.FuncMap
+		// If true then it will return error on invalid templates instead of moving them to simple string-line keys.
+		// Also it will report whether the registered languages matched the loaded ones.
+		// Defaults to false.
+		Strict bool
+	}
+	// LoaderOption is a type which accepts a pointer to `LoaderConfig`
+	// and can be optionally passed to the second
+	// variadic input argument of the `Glob` and `Assets` functions.
+	LoaderOption interface {
+		Apply(*LoaderConfig)
+	}
+)
 
-// LoaderOption is a type which accepts a pointer to `LoaderConfig`
-// and can be optionally passed to the second variadic input argument of the `Glob` and `Assets` functions.
-type LoaderOption func(*LoaderConfig)
+// Apply implements the `LoaderOption` interface.
+func (c *LoaderConfig) Apply(cfg *LoaderConfig) {
+	if c.Left != "" {
+		cfg.Left = c.Left
+	}
+
+	if c.Right != "" {
+		cfg.Right = c.Right
+	}
+
+	if c.Funcs != nil {
+		cfg.Funcs = c.Funcs
+	}
+
+	if c.Strict {
+		cfg.Strict = true
+	}
+}
 
 // Glob accepts a glob pattern (see: https://golang.org/pkg/path/filepath/#Glob)
 // and loads the locale files based on any "options".
@@ -75,7 +97,7 @@ func load(assetNames []string, asset func(string) ([]byte, error), options ...Lo
 	}
 
 	for _, opt := range options {
-		opt(&c)
+		opt.Apply(&c)
 	}
 
 	return func(m *Matcher) (Localizer, error) {
@@ -118,6 +140,18 @@ func load(assetNames []string, asset func(string) ([]byte, error), options ...Lo
 				other        = make(map[string]interface{})
 			)
 
+			t := m.Languages[langIndex]
+			locale := &defaultLocale{
+				index:        langIndex,
+				id:           t.String(),
+				tag:          &t,
+				templateKeys: templateKeys,
+				lineKeys:     lineKeys,
+				other:        other,
+
+				defaultMessageFunc: m.defaultMessageFunc,
+			}
+
 			for k, v := range keyValues {
 				// fmt.Printf("[%d] %s = %v of type: [%T]\n", langIndex, k, v, v)
 
@@ -125,7 +159,25 @@ func load(assetNames []string, asset func(string) ([]byte, error), options ...Lo
 				case string:
 					if leftIdx, rightIdx := strings.Index(value, c.Left), strings.Index(value, c.Right); leftIdx != -1 && rightIdx > leftIdx {
 						// we assume it's template?
-						if t, err := template.New(k).Delims(c.Left, c.Right).Funcs(c.FuncMap).Parse(value); err == nil {
+						// each file:line has its own template funcs so,
+						// just map it.
+
+						// builtin funcs.
+						funcs := template.FuncMap{
+							"tr": locale.GetMessage,
+						}
+
+						if c.Funcs != nil {
+							// set current locale's template's funcs.
+							for k, v := range c.Funcs(locale) {
+								funcs[k] = v
+							}
+						}
+
+						if t, err := template.New(k).
+							Delims(c.Left, c.Right).
+							Funcs(funcs).
+							Parse(value); err == nil {
 							templateKeys[k] = t
 							continue
 						} else if c.Strict {
@@ -138,16 +190,7 @@ func load(assetNames []string, asset func(string) ([]byte, error), options ...Lo
 					other[k] = v
 				}
 
-			}
-
-			t := m.Languages[langIndex]
-			locales[langIndex] = &defaultLocale{
-				index:        langIndex,
-				id:           t.String(),
-				tag:          &t,
-				templateKeys: templateKeys,
-				lineKeys:     lineKeys,
-				other:        other,
+				locales[langIndex] = locale
 			}
 		}
 
@@ -171,8 +214,27 @@ func (l MemoryLocalizer) GetLocale(index int) Locale {
 	// 	panic(fmt.Sprintf("locale of index [%d] not found", index))
 	// }
 	// return loc
+	/* Note(@kataras): the following is allowed as a language index can be higher
+	than the length of the locale files.
+	if index >= len(l) || index < 0 {
+		// 1. language exists in the caller but was not found in files.
+		// 2. language exists in both files and caller but the actual
+		// languages are two, while the registered are 4 (when missing files),
+		// that happens when Strict option is false.
+		// force to the default language but what is the default language if the language index is greater than this length?
+	 	// That's why it's allowed.
+		index = 0
+	}*/
 
-	return l[index]
+	if index < 0 {
+		index = 0
+	}
+
+	if locale, ok := l[index]; ok {
+		return locale
+	}
+
+	return l[0]
 }
 
 // SetDefault changes the default language based on the "index".
@@ -197,6 +259,8 @@ type defaultLocale struct {
 	templateKeys map[string]*template.Template
 	lineKeys     map[string]string
 	other        map[string]interface{}
+
+	defaultMessageFunc MessageFunc
 }
 
 func (l *defaultLocale) Index() int {
@@ -212,26 +276,38 @@ func (l *defaultLocale) Language() string {
 }
 
 func (l *defaultLocale) GetMessage(key string, args ...interface{}) string {
-	n := len(args)
-	if n > 0 {
-		// search on templates.
-		if tmpl, ok := l.templateKeys[key]; ok {
-			buf := new(bytes.Buffer)
-			if err := tmpl.Execute(buf, args[0]); err == nil {
-				return buf.String()
-			}
+	return l.getMessage(l.id, key, args...)
+}
+
+func (l *defaultLocale) getMessage(langInput, key string, args ...interface{}) string {
+
+	// search on templates.
+	if tmpl, ok := l.templateKeys[key]; ok {
+		buf := new(bytes.Buffer)
+		err := tmpl.Execute(buf, args[0])
+		if err != nil {
+			return err.Error()
 		}
+
+		return buf.String()
 	}
 
 	if text, ok := l.lineKeys[key]; ok {
 		return fmt.Sprintf(text, args...)
 	}
 
+	n := len(args)
+
 	if v, ok := l.other[key]; ok {
 		if n > 0 {
 			return fmt.Sprintf("%v [%v]", v, args)
 		}
 		return fmt.Sprintf("%v", v)
+	}
+
+	if l.defaultMessageFunc != nil {
+		// let langInput to be empty if that's the case.
+		return l.defaultMessageFunc(langInput, l.id, key, args...)
 	}
 
 	return ""

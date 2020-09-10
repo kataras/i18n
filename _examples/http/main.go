@@ -22,6 +22,7 @@ func main() {
 
 	I18n.URLParameter = "lang" // e.g. ?lang=el
 	I18n.Cookie = "lang"
+	I18n.Subdomain = true
 
 	router := http.NewServeMux()
 
@@ -62,7 +63,7 @@ func main() {
 	// based on a subdomain or path prefix WITHOUT add new routes for each language.
 	//
 	// go to http://localhost:8080/el-gr/some-path (by path prefix)
-	// or http://el.mydomain.com8080/some-path (by subdomain - test locally with the hosts file)
+	// or http://el.mydomain.com:8080/some-path (by subdomain - test locally with the hosts file)
 	// or http://localhost:8080/zh-CN/templates (by path prefix with uppercase)
 	// or http://localhost:8080/some-path?lang=el-GR (by url parameter)
 	// or http://localhost:8080 (default is en-US)

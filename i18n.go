@@ -2,12 +2,13 @@
 package i18n
 
 import (
-	"context"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 
+	"golang.org/x/net/publicsuffix"
 	"golang.org/x/text/language"
 )
 
@@ -71,6 +72,16 @@ type (
 		// GetMessage should return translated text based on the given "key".
 		GetMessage(key string, args ...interface{}) string
 	}
+
+	// MessageFunc is the function type to modify the behavior when a key or language was not found.
+	// All language inputs fallback to the default locale if not matched.
+	// This is why this signature accepts both input and matched languages, so caller
+	// can provide better messages.
+	//
+	// The first parameter is set to the client real input of the language,
+	// the second one is set to the matched language (default one if input wasn't matched)
+	// and the third and forth are the translation format/key and its optional arguments.
+	MessageFunc func(langInput, langMatched, key string, args ...interface{}) string
 )
 
 // I18n is the structure which keeps the i18n configuration and implements Localization and internationalization features.
@@ -84,6 +95,14 @@ type I18n struct {
 	// If not nil, this request's context key can be used to identify the current language.
 	// The found language(in this case, by path or subdomain) will be also filled with the current language on `Router` method.
 	ContextKey interface{}
+	// DefaultMessageFunc is the field which can be used
+	// to modify the behavior when a key or language was not found.
+	// All language inputs fallback to the default locale if not matched.
+	// This is why this one accepts both input and matched languages,
+	// so the caller can be more expressful knowing those.
+	//
+	// Defaults to nil.
+	DefaultMessageFunc MessageFunc
 	// ExtractFunc is the type signature for declaring custom logic
 	// to extract the language tag name.
 	ExtractFunc func(*http.Request) string
@@ -119,13 +138,13 @@ func makeTags(languages ...string) (tags []language.Tag) {
 func New(loader Loader, languages ...string) (*I18n, error) {
 	tags := makeTags(languages...)
 
-	i := &I18n{
-		loader: loader,
-		matcher: &Matcher{
-			strict:    len(tags) > 0,
-			Languages: tags,
-			matcher:   language.NewMatcher(tags),
-		},
+	i := new(I18n)
+	i.loader = loader
+	i.matcher = &Matcher{
+		strict:             len(tags) > 0,
+		Languages:          tags,
+		matcher:            language.NewMatcher(tags),
+		defaultMessageFunc: i.DefaultMessageFunc,
 	}
 
 	if err := i.reload(); err != nil {
@@ -186,6 +205,8 @@ type Matcher struct {
 	strict    bool
 	Languages []language.Tag
 	matcher   language.Matcher
+	// defaultMessageFunc passed by the i18n structure.
+	defaultMessageFunc MessageFunc
 }
 
 var _ language.Matcher = (*Matcher)(nil)
@@ -259,7 +280,7 @@ func parseLanguage(path string) (language.Tag, bool) {
 		return r == '_' || r == os.PathSeparator || r == '/' || r == '.'
 	})
 
-	names = reverseStrings(names)
+	names = reverseStrings(names) // see https://github.com/kataras/i18n/issues/1
 
 	for _, s := range names {
 		t, err := language.Parse(s)
@@ -295,24 +316,32 @@ func Tr(lang, format string, args ...interface{}) string {
 // Tr returns a translated message based on the "lang" language code
 // and its key(format) with any optional arguments attached to it.
 //
-// It returns an empty string if "format" not matched.
-func (i *I18n) Tr(lang, format string, args ...interface{}) string {
+// It returns an empty string if "lang" not matched, unless DefaultMessageFunc.
+// It returns the default language's translation if "key" not matched, unless DefaultMessageFunc.
+func (i *I18n) Tr(lang, format string, args ...interface{}) (msg string) {
 	_, index, ok := i.TryMatchString(lang)
 	if !ok {
 		index = 0
 	}
 
+	langMatched := ""
+
 	loc := i.localizer.GetLocale(index)
 	if loc != nil {
-		msg := loc.GetMessage(format, args...)
-		if msg == "" && !i.Strict && index > 0 {
+		langMatched = loc.Language()
+
+		msg = loc.GetMessage(format, args...)
+		if msg == "" && i.DefaultMessageFunc == nil && !i.Strict && index > 0 {
 			// it's not the default/fallback language and not message found for that lang:key.
-			return i.localizer.GetLocale(0).GetMessage(format, args...)
+			msg = i.localizer.GetLocale(0).GetMessage(format, args...)
 		}
-		return msg
 	}
 
-	return ""
+	if msg == "" && i.DefaultMessageFunc != nil {
+		msg = i.DefaultMessageFunc(lang, langMatched, format, args)
+	}
+
+	return
 }
 
 const acceptLanguageHeaderKey = "Accept-Language"
@@ -335,7 +364,18 @@ func (i *I18n) GetLocale(r *http.Request) Locale {
 	if i.ContextKey != nil {
 		if v := r.Context().Value(i.ContextKey); v != nil {
 			if s, isString := v.(string); isString {
-				_, index, ok = i.TryMatchString(s)
+				if v == "default" {
+					index = 0 // no need to call `TryMatchString` and spend time.
+				} else {
+					_, index, _ = i.TryMatchString(s)
+				}
+
+				locale := i.localizer.GetLocale(index)
+				if locale == nil {
+					return nil
+				}
+
+				return locale
 			}
 		}
 	}
@@ -377,8 +417,13 @@ func (i *I18n) GetLocale(r *http.Request) Locale {
 		}
 	}
 
-	// if 0 then it defaults to the first language.
-	return i.localizer.GetLocale(index)
+	// if index == 0 then it defaults to the first language.
+	locale := i.localizer.GetLocale(index)
+	if locale == nil {
+		return nil
+	}
+
+	return locale
 }
 
 // GetMessage is package-level function which calls the `Default.GetMessage` method.
@@ -390,18 +435,27 @@ func GetMessage(r *http.Request, format string, args ...interface{}) string {
 
 // GetMessage returns the localized text message for this "r" request based on the key "format".
 // It returns an empty string if locale or format not found.
-func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) string {
+func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) (msg string) {
 	loc := i.GetLocale(r)
+	langMatched := ""
 	if loc != nil {
+		langMatched = loc.Language()
 		// it's not the default/fallback language and not message found for that lang:key.
-		msg := loc.GetMessage(format, args...)
-		if msg == "" && !i.Strict && loc.Index() > 0 {
+		msg = loc.GetMessage(format, args...)
+		if msg == "" && i.DefaultMessageFunc == nil && !i.Strict && loc.Index() > 0 {
 			return i.localizer.GetLocale(0).GetMessage(format, args...)
 		}
-		return msg
 	}
 
-	return ""
+	if msg == "" && i.DefaultMessageFunc != nil && i.ContextKey != nil {
+		if v := r.Context().Value(i.ContextKey); v != nil {
+			if langInput, ok := v.(string); ok {
+				msg = i.DefaultMessageFunc(langInput, langMatched, format, args...)
+			}
+		}
+	}
+
+	return
 }
 
 // Router is package-level function which calls the `Default.Router` method.
@@ -409,6 +463,22 @@ func (i *I18n) GetMessage(r *http.Request, format string, args ...interface{}) s
 // See `I18n#Router` method for more.
 func Router(next http.Handler) http.Handler {
 	return Default.Router(next)
+}
+
+func (i *I18n) setLang(w http.ResponseWriter, r *http.Request, lang string) {
+	if i.Cookie != "" {
+		http.SetCookie(w, &http.Cookie{
+			Name:  i.Cookie,
+			Value: lang,
+			// allow subdomain sharing.
+			Domain:   getDomain(getHost(r)),
+			SameSite: http.SameSiteLaxMode,
+		})
+	} else if i.URLParameter != "" {
+		r.URL.Query().Set(i.URLParameter, lang)
+	}
+
+	r.Header.Set(acceptLanguageHeaderKey, lang)
 }
 
 // Router returns a new router wrapper.
@@ -434,41 +504,60 @@ func (i *I18n) Router(next http.Handler) http.Handler {
 
 				r.RequestURI = path
 				r.URL.Path = path
-
-				if i.ContextKey != nil {
-					r = r.WithContext(context.WithValue(r.Context(), i.ContextKey, lang))
-				}
-				r.Header.Set(acceptLanguageHeaderKey, lang)
+				i.setLang(w, r, lang)
 				found = true
 			}
 		}
 
 		if !found && i.Subdomain {
-			if subdomain, host := getSubdomain(r); subdomain != "" {
-				if tag, _, ok := i.TryMatchString(subdomain); ok {
-					lang := tag.String()
-
-					r.URL.Host = host
-					r.Host = host
-
-					if i.ContextKey != nil {
-						r = r.WithContext(context.WithValue(r.Context(), i.ContextKey, lang))
+			host := getHost(r)
+			if dotIdx := strings.IndexByte(host, '.'); dotIdx > 0 {
+				if subdomain := host[0:dotIdx]; subdomain != "" {
+					if tag, _, ok := i.TryMatchString(subdomain); ok {
+						host = host[dotIdx+1:]
+						r.URL.Host = host
+						r.Host = host
+						i.setLang(w, r, tag.String())
 					}
-					r.Header.Set(acceptLanguageHeaderKey, lang)
 				}
 			}
 		}
 
 		next.ServeHTTP(w, r)
 	})
+}
 
+func getHost(r *http.Request) string {
+	// contains subdomain.
+	if host := r.URL.Host; host != "" {
+		return host
+	}
+	return r.Host
+}
+
+// GetDomain resolves and returns the server's domain.
+func getDomain(hostport string) string {
+	host := hostport
+	if tmp, _, err := net.SplitHostPort(hostport); err == nil {
+		host = tmp
+	}
+
+	switch host {
+	// We could use the netutil.LoopbackRegex but leave it as it's for now, it's faster.
+	case "localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "0:0:0:0:0:0:0:0", "0:0:0:0:0:0:0:1":
+		// loopback.
+		return "localhost"
+	default:
+		if domain, err := publicsuffix.EffectiveTLDPlusOne(host); err == nil {
+			host = domain
+		}
+
+		return host
+	}
 }
 
 func getSubdomain(r *http.Request) (subdomain, host string) {
-	host = r.Host
-	if host == "" {
-		host = r.URL.Host
-	}
+	host = getHost(r)
 
 	if index := strings.IndexByte(host, '.'); index > 0 {
 		if subdomain = host[0:index]; subdomain != "" {

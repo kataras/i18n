@@ -55,7 +55,7 @@ Some other possible filename formats...
 
 > The language code MUST be right before the file extension.
 
-The [Default](https://github.com/kataras/i18n/blob/master/i18n.go#L37) `I18n` instance will try to load locale files from `./locales` directory.
+The [Default](https://github.com/kataras/i18n/blob/master/i18n.go#L33) `I18n` instance will try to load locale files from `./locales` directory.
 Use the `Tr` package-level function to translate a text based on the given language code. Use the `GetMessage` function to translate a text based on the incoming `http.Request`. Use the `Router` function to wrap an `http.Handler` (i.e an `http.ServeMux`) to set the language based on _path prefix_ such as `/zh-CN/some-path` and subdomains such as `zh.domain.com` **without the requirement of different routes per language**.
 
 Let's take a look at the simplest usage of this package.
@@ -111,6 +111,92 @@ I18n, err := i18n.New(i18n.Glob("./locales/*/*"), "en-US", "el-GR", "zh-CN")
 I18n, err := i18n.New(i18n.Assets(AssetNames, Asset), "en-US", "el-GR", "zh-CN")
 ```
 
+## Template variables & functions
+
+Using **template variables & functions** as values in your locale value entry via `LoaderConfig`.
+
+We are going to use a 3rd-party package for plural and singular words. Note that this is only for english dictionary, but you can use the `"current"` `Locale` and make a map with dictionaries to pluralize words based on the given language.
+
+Before we get started, install the necessary packages:
+
+```sh
+$ go get -u github.com/kataras/i18n
+$ go get -u github.com/gertd/go-pluralize
+```
+
+Let's create two simple translation files for our example. The `./locales/en-US/welcome.yml` and `./locales/el-GR/welcome.yml` respectfully:
+
+```yml
+Dog: "dog"
+HiDogs: Hi {{plural (tr "Dog") .count }}
+```
+
+```yml
+Dog: "σκυλί"
+HiDogs: Γειά {{plural (tr "Dog") .count }}
+```
+
+> The `tr` template function is a builtin function registered per locale. It returns the key's translated value. E.g. on english file the `tr "Dog"` returns the `Dog:`'s value: `"dog"` and on greek file it returns `"σκυλί"`. This function helps importing a key to another key to complete a sentence.
+
+Now, create a `main.go` file and store the following contents:
+
+```go
+package main
+
+import (
+    "fmt"
+    "text/template"
+
+    "github.com/kataras/i18n"
+    "github.com/gertd/go-pluralize"
+)
+
+var pluralizeClient = pluralize.NewClient()
+
+func getFuncs(current i18n.Locale) template.FuncMap {
+    return template.FuncMap{
+        "plural": func(word string, count int) string {
+            return pluralizeClient.Pluralize(word, count, true)
+        },
+    }
+}
+
+func main() {
+    I18n, err := i18n.New(i18n.Glob("./locales/*/*", &i18n.LoaderConfig{
+        // Set custom functions per locale!
+        Funcs: getFuncs,
+    }), "en-US", "el-GR", "zh-CN")
+    if err != nil {
+        panic(err)
+    }
+
+    textEnglish := I18n.Tr("en", "HiDogs", map[string]interface{}{
+        "count": 2,
+    }) // prints "Hi 2 dogs".
+    fmt.Println(textEnglish)
+
+    textEnglishSingular := I18n.Tr("en", "HiDogs", map[string]interface{}{
+        "count": 1,
+    }) // prints "Hi 1 dog".
+    fmt.Println(textEnglishSingular)
+
+    textGreek := I18n.Tr("el", "HiDogs", map[string]interface{}{
+        "count": 1,
+    }) // prints "Γειά 1 σκυλί".
+    fmt.Println(textGreek)
+}
+```
+
+Use `go run main.go` to run our small Go program. The output should look like this:
+
+```sh
+Hi 2 dogs
+Hi 1 dog
+Γειά 1 σκυλί
+```
+
+## HTTP
+
 HTTP, automatically searches for url parameter, cookie, custom function and headers for the current user language.
 
 ```go
@@ -156,7 +242,7 @@ mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 })
 ```
 
-Set the translate function as a key on a `Template`.
+Set the translate function as a key on a `HTML Template`.
 
 ```go
 templates, _ := template.ParseGlob("./templates/*.html")
@@ -172,6 +258,7 @@ mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
     // {{ call .tr "hi" "John Doe" }}
 })
 ```
+
 Global function with the language as its first input argument.
 
 ```go
