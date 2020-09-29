@@ -1,4 +1,4 @@
 hi: "Hi {{.Name}}"
-int: 1
+int: "1"
 hello: "Hello %s"
 # welcome: "You are welcome"

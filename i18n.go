@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kataras/i18n/internal"
+
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/text/language"
 )
@@ -42,6 +44,23 @@ func SetDefaultLanguage(langCode string) bool {
 }
 
 type (
+	// Map is just an alias of the map[string]interface{} type.
+	Map = map[string]interface{}
+
+	// Locale is the type which the `Localizer.GetLocale` method returns.
+	// It serves the translations based on "key" or format. See its `GetMessage`.
+	Locale = internal.Locale
+
+	// MessageFunc is the function type to modify the behavior when a key or language was not found.
+	// All language inputs fallback to the default locale if not matched.
+	// This is why this signature accepts both input and matched languages, so caller
+	// can provide better messages.
+	//
+	// The first parameter is set to the client real input of the language,
+	// the second one is set to the matched language (default one if input wasn't matched)
+	// and the third and forth are the translation format/key and its optional arguments.
+	MessageFunc = internal.MessageFunc
+
 	// Loader accepts a `Matcher` and should return a `Localizer`.
 	// Functions that implement this type should load locale files.
 	Loader func(m *Matcher) (Localizer, error)
@@ -53,35 +72,8 @@ type (
 		// GetLocale should return a valid `Locale` based on the language index.
 		// It will always match the Loader.Matcher.Languages[index].
 		// It may return the default language if nothing else matches based on custom localizer's criteria.
-		GetLocale(index int) Locale
+		GetLocale(index int) *Locale
 	}
-
-	// Locale is the interface which returns from a `Localizer.GetLocale` method.
-	// It serves the translations based on "key" or format. See `GetMessage`.
-	Locale interface {
-		// Index returns the current locale index from the languages list.
-		Index() int
-		// Tag returns the full language Tag attached to this Locale,
-		// it should be unique across different Locales.
-		Tag() *language.Tag
-		// Language should return the exact language code of this `Locale`
-		// that the user provided on `New` function.
-		//
-		// Same as `Tag().String()` but it's static.
-		Language() string
-		// GetMessage should return translated text based on the given "key".
-		GetMessage(key string, args ...interface{}) string
-	}
-
-	// MessageFunc is the function type to modify the behavior when a key or language was not found.
-	// All language inputs fallback to the default locale if not matched.
-	// This is why this signature accepts both input and matched languages, so caller
-	// can provide better messages.
-	//
-	// The first parameter is set to the client real input of the language,
-	// the second one is set to the matched language (default one if input wasn't matched)
-	// and the third and forth are the translation format/key and its optional arguments.
-	MessageFunc func(langInput, langMatched, key string, args ...interface{}) string
 )
 
 // I18n is the structure which keeps the i18n configuration and implements Localization and internationalization features.
@@ -349,13 +341,13 @@ const acceptLanguageHeaderKey = "Accept-Language"
 // GetLocale is package-level function which calls the `Default.GetLocale` method.
 //
 // See `I18n#GetLocale` method for more.
-func GetLocale(r *http.Request) Locale {
+func GetLocale(r *http.Request) *Locale {
 	return Default.GetLocale(r)
 }
 
 // GetLocale returns the found locale of a request.
 // It will return the first registered language if nothing else matched.
-func (i *I18n) GetLocale(r *http.Request) Locale {
+func (i *I18n) GetLocale(r *http.Request) *Locale {
 	var (
 		index int
 		ok    bool

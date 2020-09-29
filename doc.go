@@ -5,7 +5,7 @@ Source code and other details for the project are available at GitHub:
 
 Current Version
 
-   0.0.4
+   0.0.5
 
 Installation
 

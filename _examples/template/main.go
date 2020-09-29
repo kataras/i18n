@@ -13,10 +13,13 @@ import (
 /*
  I18n supports text/template inside the translation values.
  Follow this example to learn how to use that feature.
+
+ This is just an example on how to use template functions.
+ See the "plurals" example for a more comprehensive pluralization support instead.
 */
 var pluralizeClient = pluralize.NewClient()
 
-func getFuncs(current i18n.Locale) template.FuncMap {
+func getFuncs(current *i18n.Locale) template.FuncMap {
 
 	return template.FuncMap{
 		"plural": func(word string, count int) string {
@@ -33,7 +36,7 @@ func getFuncs(current i18n.Locale) template.FuncMap {
 }
 
 func main() {
-	I18n, err := i18n.New(i18n.Glob("./locales/*/*", &i18n.LoaderConfig{
+	I18n, err := i18n.New(i18n.Glob("./locales/*/*", i18n.LoaderConfig{
 		// Set custom functions per locale!
 		Funcs: getFuncs,
 	}), "en-US", "el-GR", "zh-CN")

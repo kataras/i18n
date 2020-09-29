@@ -1,5 +1,0 @@
-- id: hi
-  translation: "hi {{.}}"
-# Tr("hello", Struct{Name: "Gerasimos"})
-# - id: hello
-#   translation: "hello {{.Name}}"

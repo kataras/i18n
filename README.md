@@ -1,16 +1,28 @@
 # i18n (Go)
 
-[![build status](https://img.shields.io/travis/kataras/i18n/master.svg?style=for-the-badge&logo=travis)](https://travis-ci.org/kataras/i18n) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://godoc.org/github.com/kataras/i18n) [![donate on PayPal](https://img.shields.io/badge/support-PayPal-blue.svg?style=for-the-badge)](https://www.paypal.me/kataras)
+[![build status](https://img.shields.io/travis/kataras/i18n/master.svg?style=for-the-badge&logo=travis)](https://travis-ci.org/kataras/i18n) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://godoc.org/github.com/kataras/i18n) [![donate on Stripe](https://img.shields.io/badge/support-Stripe-blue.svg?style=for-the-badge)](https://iris-go.com/donate)
 
 Efficient and easy to use localization and internationalization support for Go.
 
-## Getting started
+## Installation
 
 The only requirement is the [Go Programming Language](https://golang.org/dl).
 
 ```sh
-$ go get github.com/kataras/i18n
+$ go get -u github.com/kataras/i18n
 ```
+
+**Examples**
+
+- [Basic](_examples/basic)
+- [Template](_examples/template)
+- [Pluralization](_examples/plurals) **NEW**
+    - [en-US/welcome.yml](_examples/plurals/locales/en-US/welcome.yml)
+    - [en-US/ini_example.ini](_examples/plurals/locales/en-US/ini_example.ini)
+- [HTTP](_examples/http)
+- [Embedded Locales](_examples/embedded-files)
+
+## Getting started
 
 Create a folder named `./locales` and put some `YAML`, `TOML`, `JSON` or `INI` files.
 
@@ -153,7 +165,7 @@ import (
 
 var pluralizeClient = pluralize.NewClient()
 
-func getFuncs(current i18n.Locale) template.FuncMap {
+func getFuncs(current *i18n.Locale) template.FuncMap {
     return template.FuncMap{
         "plural": func(word string, count int) string {
             return pluralizeClient.Pluralize(word, count, true)
@@ -162,7 +174,7 @@ func getFuncs(current i18n.Locale) template.FuncMap {
 }
 
 func main() {
-    I18n, err := i18n.New(i18n.Glob("./locales/*/*", &i18n.LoaderConfig{
+    I18n, err := i18n.New(i18n.Glob("./locales/*/*", i18n.LoaderConfig{
         // Set custom functions per locale!
         Funcs: getFuncs,
     }), "en-US", "el-GR", "zh-CN")
