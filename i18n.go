@@ -330,7 +330,7 @@ func (i *I18n) Tr(lang, format string, args ...interface{}) (msg string) {
 	}
 
 	if msg == "" && i.DefaultMessageFunc != nil {
-		msg = i.DefaultMessageFunc(lang, langMatched, format, args)
+		msg = i.DefaultMessageFunc(lang, langMatched, format, args...)
 	}
 
 	return
