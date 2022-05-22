@@ -11,7 +11,7 @@ Installation
 
 The only requirement is the Go Programming Language
 
-    $ go get -u github.com/kataras/i18n
+    $ go get github.com/kataras/i18n@latest
 
 Examples
 

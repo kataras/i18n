@@ -9,7 +9,7 @@ Efficient and easy to use localization and internationalization support for Go.
 The only requirement is the [Go Programming Language](https://golang.org/dl).
 
 ```sh
-$ go get -u github.com/kataras/i18n
+$ go get github.com/kataras/i18n@latest
 ```
 
 **Examples**
