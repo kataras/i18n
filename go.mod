@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.1.0
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	golang.org/x/text v0.3.7
-	gopkg.in/ini.v1 v1.66.4
+	gopkg.in/ini.v1 v1.66.5
 	gopkg.in/yaml.v3 v3.0.1
 )
 
