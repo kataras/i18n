@@ -3,7 +3,7 @@ module github.com/kataras/i18n
 go 1.18
 
 require (
-	github.com/BurntSushi/toml v1.2.0
+	github.com/BurntSushi/toml v1.2.1
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	golang.org/x/text v0.4.0
 	gopkg.in/ini.v1 v1.67.0
