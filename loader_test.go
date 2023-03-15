@@ -163,17 +163,9 @@ func copyDir(src, dest string) error {
 			}
 		}
 
-		var v os.FileInfo
-		v.Mode()
-
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
-
-		isSymlink := info.Mode()&os.ModeSymlink != 0
+		isSymlink := fileInfo.Mode()&os.ModeSymlink != 0
 		if !isSymlink {
-			if err := os.Chmod(destPath, info.Mode()); err != nil {
+			if err := os.Chmod(destPath, fileInfo.Mode()); err != nil {
 				return err
 			}
 		}
