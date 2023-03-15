@@ -1,6 +1,6 @@
 # i18n (Go)
 
-[![build status](https://img.shields.io/github/actions/workflow/status/kataras/i18n/ci.yml?style=for-the-badge) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://godoc.org/github.com/kataras/i18n) [![donate on Stripe](https://img.shields.io/badge/support-Stripe-blue.svg?style=for-the-badge)](https://iris-go.com/donate)
+[![build status](https://img.shields.io/github/actions/workflow/status/kataras/i18n/ci.yml?style=for-the-badge)] [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://godoc.org/github.com/kataras/i18n) [![donate on Stripe](https://img.shields.io/badge/support-Stripe-blue.svg?style=for-the-badge)](https://iris-go.com/donate)
 
 Efficient and easy to use localization and internationalization support for Go.
 
