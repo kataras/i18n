@@ -2,7 +2,6 @@ package i18n
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -137,7 +136,7 @@ func TestLoadAbsDirWithPotentialLangCode(t *testing.T) {
 }
 
 func copyDir(src, dest string) error {
-	entries, err := ioutil.ReadDir(src)
+	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -164,9 +163,17 @@ func copyDir(src, dest string) error {
 			}
 		}
 
-		isSymlink := entry.Mode()&os.ModeSymlink != 0
+		var v os.FileInfo
+		v.Mode()
+
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+
+		isSymlink := info.Mode()&os.ModeSymlink != 0
 		if !isSymlink {
-			if err := os.Chmod(destPath, entry.Mode()); err != nil {
+			if err := os.Chmod(destPath, info.Mode()); err != nil {
 				return err
 			}
 		}
@@ -180,14 +187,13 @@ func copyFile(srcFile, dstFile string) error {
 	if err != nil {
 		return err
 	}
-
 	defer out.Close()
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		return err
 	}
+	defer in.Close()
 
 	_, err = io.Copy(out, in)
 	if err != nil {

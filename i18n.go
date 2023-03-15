@@ -19,13 +19,13 @@ import (
 // structure as:
 // - ./locales
 //   - el-GR
-//     - filename.yaml
-//     - filename.toml
-//     - filename.json
+//   - filename.yaml
+//   - filename.toml
+//   - filename.json
 //   - en-US
-//     - ...
+//   - ...
 //   - zh-CN
-//     - ...
+//   - ...
 //   - ...
 //
 // The default language depends on the first lookup, please use the package-level `SetDefaultLanguage`

@@ -11,11 +11,11 @@ import (
 )
 
 /*
- I18n supports text/template inside the translation values.
- Follow this example to learn how to use that feature.
+I18n supports text/template inside the translation values.
+Follow this example to learn how to use that feature.
 
- This is just an example on how to use template functions.
- See the "plurals" example for a more comprehensive pluralization support instead.
+This is just an example on how to use template functions.
+See the "plurals" example for a more comprehensive pluralization support instead.
 */
 var pluralizeClient = pluralize.NewClient()
 
