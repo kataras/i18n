@@ -135,7 +135,47 @@ var staticFS embed.FS
 loader, err := i18n.FS(staticFS, "./static/locales/*/*.yml")
 // [handle error...]
 I18n, err := i18n.New(loader, "en-US", "el-GR", "zh-CN")
-// [handle error...]
+```
+
+Load through a simple Go map:
+
+```go
+m := i18n.LangMap{
+    "en-US": i18n.Map{
+        "buy":               `buy %d`,
+        "cart.checkout":     `checkout - {{.Param}}`,
+        "cart.after.thanks": `thanks`,
+        //
+        "JSONTemplateExample":  `value of {{.Value}}`,
+        "TypeOf":               `type of %T`,
+        "KeyOnlyOnDefaultLang": `value`,
+        //
+        "title": `Title`,
+        "hi":    `Hi {{.Name}}`,
+        "int":   `1`,
+        "hello": `Hello %s`,
+        //
+        "welcome": `welcome`,
+    },
+    "el-GR": i18n.Map{
+        "buy":               `αγοράστε %d`,
+        "cart.checkout":     `ολοκλήρωση παραγγελίας - {{.Param}}`,
+        "cart.after.thanks": `ευχαριστούμε`,
+        //
+        "JSONTemplateExample": `τιμή του {{.Value}}`,
+        "TypeOf":              `τύπος %T`,
+        //
+        "title": `Τίτλος`,
+        "hi":    `Γειά σου {{.Name}}`,
+        "int":   `1`,
+        //
+        "welcome": `καλώς ήρθατε`,
+    },
+}
+
+loader := i18n.KV(m)
+
+i18N, err := i18n.New(loader, "en-US", "el-GR")
 ```
 
 ## Template variables & functions

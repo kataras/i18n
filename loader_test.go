@@ -17,6 +17,55 @@ func TestLoad(t *testing.T) {
 	testLoadAndTrHelper(t, i18N)
 }
 
+func TestLoadKV(t *testing.T) {
+	m := LangMap{
+		"en-US": Map{
+			"buy":               `buy %d`,
+			"cart.checkout":     `checkout - {{.Param}}`,
+			"cart.after.thanks": `thanks`,
+			//
+			"JSONTemplateExample":  `value of {{.Value}}`,
+			"TypeOf":               `type of %T`,
+			"KeyOnlyOnDefaultLang": `value`,
+			//
+			"title": `Title`,
+			"hi":    `Hi {{.Name}}`,
+			"int":   `1`,
+			"hello": `Hello %s`,
+			//
+			"welcome": `welcome`,
+		},
+		"el-GR": Map{
+			"buy":               `αγοράστε %d`,
+			"cart.checkout":     `ολοκλήρωση παραγγελίας - {{.Param}}`,
+			"cart.after.thanks": `ευχαριστούμε`,
+			//
+			"JSONTemplateExample": `τιμή του {{.Value}}`,
+			"TypeOf":              `τύπος %T`,
+			//
+			"title": `Τίτλος`,
+			"hi":    `Γειά σου {{.Name}}`,
+			"int":   `1`,
+			//
+			"welcome": `καλώς ήρθατε`,
+		},
+	}
+	i18N, err := New(KV(m), "en-US", "el-GR")
+	if err != nil {
+		t.Fatal(err)
+	}
+	i18N.SetDefault("en-US")
+
+	// Test welcome.
+	got := i18N.Tr("el-GR", "welcome")
+	if expected := "καλώς ήρθατε"; got != expected {
+		t.Fatalf("expected %s but got %s", expected, got)
+	}
+
+	// Test the rest.
+	testLoadAndTrHelper(t, i18N)
+}
+
 func testLoadAndTrHelper(t *testing.T, i18N *I18n) {
 	t.Helper()
 

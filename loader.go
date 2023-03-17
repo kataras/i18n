@@ -38,8 +38,8 @@ func Glob(globPattern string, options ...LoaderConfig) Loader {
 	return load(assetNames, os.ReadFile, options...)
 }
 
-// LoadFS loads the files using embed.FS or fs.FS or
-// http.FileSystem or string (local directory).
+// FS is a virtual or local locale file system Loader.
+// It accepts embed.FS or fs.FS or http.FileSystem.
 // The "pattern" is a classic glob pattern.
 //
 // See `Glob`, `Assets`, `New` and `LoaderConfig` too.
@@ -71,6 +71,54 @@ func FS(fileSystem fs.FS, pattern string, options ...LoaderConfig) (Loader, erro
 // See `Glob`, `Assets`, `New` and `LoaderConfig` too.
 func Assets(assetNames func() []string, asset func(string) ([]byte, error), options ...LoaderConfig) Loader {
 	return load(assetNames(), asset, options...)
+}
+
+// LangMap key as language (e.g. "el-GR") and value as a map of key-value pairs (e.g. "hello": "Γειά").
+type LangMap = map[string]Map
+
+// KV is a loader which accepts a map of language(key) and the available key-value pairs.
+// Example Code:
+//
+//	m := LangMap{
+//		"en-US": Map{
+//			"hello": "Hello",
+//		},
+//		"el-GR": Map{
+//			"hello": "Γειά",
+//		},
+//	}
+//
+// loader := KV(m, i18n.DefaultLoaderConfig)
+// I18n, err := New(loader, "en-US", "el-GR")
+func KV(langMap LangMap, opts ...LoaderConfig) Loader {
+	return func(m *Matcher) (Localizer, error) {
+		options := DefaultLoaderConfig
+
+		if len(opts) > 0 {
+			options = opts[0]
+		}
+
+		cat, err := internal.NewCatalog(m.Languages, options)
+		if err != nil {
+			return nil, err
+		}
+
+		for languageName, keyValues := range langMap {
+			langIndex := parseLanguageName(m, languageName)
+			err := cat.Store(langIndex, keyValues)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if n := len(cat.Locales); n == 0 {
+			return nil, fmt.Errorf("locales not found in map")
+		} else if options.Strict && n < len(m.Languages) {
+			return nil, fmt.Errorf("locales expected to be %d but %d parsed", len(m.Languages), n)
+		}
+
+		return cat, nil
+	}
 }
 
 // DefaultLoaderConfig represents the default loader configuration.

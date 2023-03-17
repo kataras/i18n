@@ -254,6 +254,16 @@ func parsePath(m *Matcher, path string) int {
 	return -1
 }
 
+func parseLanguageName(m *Matcher, name string) int {
+	if t, err := language.Parse(name); err == nil {
+		if _, index, conf := m.MatchOrAdd(t); conf > language.Low {
+			return index
+		}
+	}
+
+	return -1
+}
+
 func reverseStrings(s []string) []string {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]
