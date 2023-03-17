@@ -1,12 +1,12 @@
 # i18n (Go)
 
-[![build status](https://img.shields.io/github/actions/workflow/status/kataras/i18n/ci.yml?branch=master&style=for-the-badge)](https://github.com/kataras/i18n/actions) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://godoc.org/github.com/kataras/i18n) [![donate on Stripe](https://img.shields.io/badge/support-Stripe-blue.svg?style=for-the-badge)](https://iris-go.com/donate)
+[![build status](https://img.shields.io/github/actions/workflow/status/kataras/i18n/ci.yml?branch=master&style=for-the-badge)](https://github.com/kataras/i18n/actions) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=for-the-badge)](https://goreportcard.com/report/github.com/kataras/i18n) [![godocs](https://img.shields.io/badge/go-%20docs-488AC7.svg?style=for-the-badge)](https://pkg.go.dev/github.com/kataras/i18n) [![donate on Stripe](https://img.shields.io/badge/support-Stripe-blue.svg?style=for-the-badge)](https://iris-go.com/donate)
 
 Efficient and easy to use localization and internationalization support for Go.
 
 ## Installation
 
-The only requirement is the [Go Programming Language](https://golang.org/dl).
+The only requirement is the [Go Programming Language](https://go.dev/dl).
 
 ```sh
 $ go get github.com/kataras/i18n@latest
@@ -16,7 +16,7 @@ $ go get github.com/kataras/i18n@latest
 
 - [Basic](_examples/basic)
 - [Template](_examples/template)
-- [Pluralization](_examples/plurals) **NEW**
+- [Pluralization](_examples/plurals)
     - [en-US/welcome.yml](_examples/plurals/locales/en-US/welcome.yml)
     - [en-US/ini_example.ini](_examples/plurals/locales/en-US/ini_example.ini)
 - [HTTP](_examples/http)
@@ -118,9 +118,24 @@ Load specific languages over a **new I18n instance**. The default language is th
 
 ```go
 I18n, err := i18n.New(i18n.Glob("./locales/*/*"), "en-US", "el-GR", "zh-CN")
+```
 
-// load embedded files through a go-bindata package
+Load embedded files through a go-bindata package:
+
+```go
 I18n, err := i18n.New(i18n.Assets(AssetNames, Asset), "en-US", "el-GR", "zh-CN")
+```
+
+Load embedded files through Go's embed directive (**recommended**):
+
+```go
+//go:embed static/locales/*
+var staticFS embed.FS
+
+loader, err := i18n.FS(staticFS, "./static/locales/*/*.yml")
+// [handle error...]
+I18n, err := i18n.New(loader, "en-US", "el-GR", "zh-CN")
+// [handle error...]
 ```
 
 ## Template variables & functions
@@ -132,8 +147,8 @@ We are going to use a 3rd-party package for plural and singular words. Note that
 Before we get started, install the necessary packages:
 
 ```sh
-$ go get -u github.com/kataras/i18n
-$ go get -u github.com/gertd/go-pluralize
+$ go get github.com/kataras/i18n@master
+$ go get github.com/gertd/go-pluralize@master
 ```
 
 Let's create two simple translation files for our example. The `./locales/en-US/welcome.yml` and `./locales/el-GR/welcome.yml` respectfully:
@@ -282,7 +297,7 @@ templates.Funcs(template.FuncMap{
 // {{ tr "en" "hi" "John Doe" }}
 ```
 
-For a more detailed technical documentation you can head over to our [godocs](https://godoc.org/github.com/kataras/i18n). And for executable code you can always visit the [_examples](_examples) repository's subdirectory.
+For a more detailed technical documentation you can head over to our [godocs](https://pkg.go.dev/github.com/kataras/i18n). And for executable code you can always visit the [_examples](_examples) repository's subdirectory.
 
 ## License
 
