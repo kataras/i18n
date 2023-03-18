@@ -89,13 +89,22 @@ type LangMap = map[string]Map
 //	}
 //
 // loader := KV(m, i18n.DefaultLoaderConfig)
-// I18n, err := New(loader, "en-US", "el-GR")
+// I18n, err := New(loader)
+// I18N.SetDefault("en-US")
 func KV(langMap LangMap, opts ...LoaderConfig) Loader {
 	return func(m *Matcher) (Localizer, error) {
 		options := DefaultLoaderConfig
-
 		if len(opts) > 0 {
 			options = opts[0]
+		}
+
+		languageIndexes := make([]int, 0, len(langMap))
+		keyValuesMulti := make([]Map, 0, len(langMap))
+
+		for languageName, pairs := range langMap {
+			langIndex := parseLanguageName(m, languageName) // matches and adds the language tag to m.Languages.
+			languageIndexes = append(languageIndexes, langIndex)
+			keyValuesMulti = append(keyValuesMulti, pairs)
 		}
 
 		cat, err := internal.NewCatalog(m.Languages, options)
@@ -103,9 +112,15 @@ func KV(langMap LangMap, opts ...LoaderConfig) Loader {
 			return nil, err
 		}
 
-		for languageName, keyValues := range langMap {
-			langIndex := parseLanguageName(m, languageName)
-			err := cat.Store(langIndex, keyValues)
+		for _, langIndex := range languageIndexes {
+			if langIndex == -1 {
+				// If loader has more languages than defined for use in New function,
+				// e.g. when New(KV(m), "en-US") contains el-GR and en-US but only "en-US" passed.
+				continue
+			}
+
+			kv := keyValuesMulti[langIndex]
+			err := cat.Store(langIndex, kv)
 			if err != nil {
 				return nil, err
 			}

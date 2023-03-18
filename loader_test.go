@@ -50,7 +50,7 @@ func TestLoadKV(t *testing.T) {
 			"welcome": `καλώς ήρθατε`,
 		},
 	}
-	i18N, err := New(KV(m), "en-US", "el-GR")
+	i18N, err := New(KV(m))
 	if err != nil {
 		t.Fatal(err)
 	}
